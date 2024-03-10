@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -37,6 +38,7 @@ func main() {
 
 	// Configure desired model.
 	model := client.GenerativeModel("gemini-pro")
+	model.SetTemperature(1)
 	// log.Printf("model: %v", model)
 
 	// Initialize new chat session.
@@ -55,11 +57,13 @@ func main() {
 
 func chat(ctx context.Context, session *genai.ChatSession) {
 	for {
-		var action string
+		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("\n>> ")
-		fmt.Scanln(&action)
+		action, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatalf("Error reading input: %v\n", err)
+		}
 
-		fmt.Println("---------------------------------------------")
 		send(ctx, session, action)
 	}
 }
@@ -87,7 +91,6 @@ func send(ctx context.Context, session *genai.ChatSession, text string) {
 
 	// Display the response.
 	for _, part := range resp.Candidates[0].Content.Parts {
-		fmt.Println("---")
-		fmt.Printf("%v\n", part)
+		fmt.Printf("\n\n%v\n", part)
 	}
 }
