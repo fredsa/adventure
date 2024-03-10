@@ -18,6 +18,9 @@ import (
 
 const initialPromptFile = "prompt.md"
 
+// Streaming output column position.
+var col = 0
+
 // getBytes returns the file contents as bytes.
 func getBytes(path string) []byte {
 	bytes, err := os.ReadFile(path)
@@ -40,17 +43,20 @@ func main() {
 
 	// Configure desired model.
 	model := client.GenerativeModel("gemini-pro")
-	model.SetTemperature(1)
+	model.SetTemperature(0.4)
 	// log.Printf("model: %v", model)
 
 	// Initialize new chat session.
 	session := model.StartChat()
 	// log.Printf("session: %v", session)
 
-	// // Establish chat history.
+	// Establish chat history.
 	// session.History = []*genai.Content{{
 	// 	Role:  "user",
 	// 	Parts: []genai.Part{genai.Text(getBytes(initialPromptFile))},
+	// }, {
+	// 	Role:  "model",
+	// 	Parts: []genai.Part{genai.Text("Chapter 1 The Dream")},
 	// }}
 
 	send(ctx, session, string(getBytes(initialPromptFile)))
@@ -72,14 +78,16 @@ func chat(ctx context.Context, session *genai.ChatSession) {
 
 func send(ctx context.Context, session *genai.ChatSession, text string) {
 	it := session.SendMessageStream(ctx, genai.Text(text))
-	fmt.Print("\n\n")
+	printRuneAndFormat('\n')
+	printRuneAndFormat('\n')
+
 	for {
 		resp, err := it.Next()
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			fmt.Print("\n\nYou feel a sudden jolt of elecitricty as you realize you're being unplugged from the matrix.\n\n")
+			printStringAndFormat("\n\nYou feel a jolt of electricity as you realize you're being unplugged from the matrix.\n\n")
 			log.Printf("Error sending message: err=%v\n", err)
 
 			var ae *apierror.APIError
@@ -96,19 +104,46 @@ func send(ctx context.Context, session *genai.ChatSession, text string) {
 			}
 			os.Exit(1)
 		}
-
-		// Display the response.
-		for _, part := range resp.Candidates[0].Content.Parts {
-			// Slow down streamed response.
-			for _, c := range fmt.Sprintf("%v", part) {
-				fmt.Print(string(c))
-				time.Sleep(time.Millisecond * 30)
-				if c == '.' {
-					fmt.Print(" ")
-					time.Sleep(time.Second)
-				}
-			}
-		}
+		streamPartialResponse(resp.Candidates[0].Content.Parts)
 	}
-	fmt.Print("\n")
+	printRuneAndFormat('\n')
+}
+
+func streamPartialResponse(parts []genai.Part) {
+	for _, part := range parts {
+		printStringAndFormat(fmt.Sprintf("%v", part))
+	}
+}
+
+func printStringAndFormat(text string) {
+	for _, c := range text {
+		printRuneAndFormat(c)
+	}
+}
+
+// Format response, and type out repsonse slowly.
+func printRuneAndFormat(c rune) {
+	switch c {
+	case '.':
+		fmt.Print(string(c))
+		col++
+		time.Sleep(time.Millisecond * 300)
+	case '\n':
+		fmt.Print(string(c))
+		col = 0
+	case ' ':
+		if col == 0 {
+			// Do nothing.
+		} else if col > 80 {
+			fmt.Print("\n")
+			col = 0
+		} else {
+			fmt.Print(string(c))
+			col++
+		}
+	default:
+		fmt.Print(string(c))
+		col++
+	}
+	time.Sleep(time.Millisecond * 30)
 }
