@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/generative-ai-go/genai"
 	"github.com/googleapis/gax-go/v2/apierror"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/status"
 )
@@ -69,28 +70,35 @@ func chat(ctx context.Context, session *genai.ChatSession) {
 }
 
 func send(ctx context.Context, session *genai.ChatSession, text string) {
-	resp, err := session.SendMessage(ctx, genai.Text(text))
-	if err != nil {
-		log.Printf("Error sending message: err=%v\n", err)
-
-		var ae *apierror.APIError
-		if errors.As(err, &ae) {
-			log.Printf("ae.Reason(): %v\n", ae.Reason())
-			log.Printf("ae.Details().Help.GetLinks(): %v\n", ae.Details().Help.GetLinks())
+	it := session.SendMessageStream(ctx, genai.Text(text))
+	fmt.Print("\n\n")
+	for {
+		resp, err := it.Next()
+		if err == iterator.Done {
+			break
 		}
+		if err != nil {
+			log.Printf("\nError sending message: err=%v\n", err)
 
-		if s, ok := status.FromError(err); ok {
-			log.Printf("s.Message: %v\n", s.Message())
-			for _, d := range s.Proto().Details {
-				log.Printf("- Details: %v\n", d)
+			var ae *apierror.APIError
+			if errors.As(err, &ae) {
+				log.Printf("ae.Reason(): %v\n", ae.Reason())
+				log.Printf("ae.Details().Help.GetLinks(): %v\n", ae.Details().Help.GetLinks())
 			}
-		}
-		os.Exit(1)
-	}
-	// log.Printf("resp: %v", resp)
 
-	// Display the response.
-	for _, part := range resp.Candidates[0].Content.Parts {
-		fmt.Printf("\n\n%v\n", part)
+			if s, ok := status.FromError(err); ok {
+				log.Printf("s.Message: %v\n", s.Message())
+				for _, d := range s.Proto().Details {
+					log.Printf("- Details: %v\n", d)
+				}
+			}
+			os.Exit(1)
+		}
+
+		// Display the response.
+		for _, part := range resp.Candidates[0].Content.Parts {
+			fmt.Print(part)
+		}
 	}
+	fmt.Print("\n")
 }
