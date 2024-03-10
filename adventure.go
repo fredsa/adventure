@@ -16,7 +16,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const initialPromptFile = "prompt.md"
+const instructionsFile = "instructions.md"
+
+var sleepTime = struct {
+	character time.Duration
+	sentence  time.Duration
+}{
+	character: time.Millisecond * 30,
+	sentence:  time.Millisecond * 300,
+}
 
 // Streaming output column position.
 var col = 0
@@ -50,16 +58,18 @@ func main() {
 	session := model.StartChat()
 	// log.Printf("session: %v", session)
 
-	// Establish chat history.
-	// session.History = []*genai.Content{{
-	// 	Role:  "user",
-	// 	Parts: []genai.Part{genai.Text(getBytes(initialPromptFile))},
-	// }, {
-	// 	Role:  "model",
-	// 	Parts: []genai.Part{genai.Text("Chapter 1 The Dream")},
-	// }}
+	dreamQuestion := "What do you want to dream about?"
 
-	send(ctx, session, string(getBytes(initialPromptFile)))
+	// Establish chat history.
+	session.History = []*genai.Content{{
+		Role:  "user",
+		Parts: []genai.Part{genai.Text(getBytes(instructionsFile))},
+	}, {
+		Role:  "model",
+		Parts: []genai.Part{genai.Text(dreamQuestion)},
+	}}
+
+	printStringAndFormat(dreamQuestion)
 	chat(ctx, session)
 }
 
@@ -127,7 +137,7 @@ func printRuneAndFormat(c rune) {
 	case '.':
 		fmt.Print(string(c))
 		col++
-		time.Sleep(time.Millisecond * 300)
+		time.Sleep(sleepTime.sentence)
 	case '\n':
 		fmt.Print(string(c))
 		col = 0
@@ -145,5 +155,5 @@ func printRuneAndFormat(c rune) {
 		fmt.Print(string(c))
 		col++
 	}
-	time.Sleep(time.Millisecond * 30)
+	time.Sleep(sleepTime.character)
 }
