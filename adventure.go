@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/generative-ai-go/genai"
@@ -22,8 +23,8 @@ var sleepTime = struct {
 	character time.Duration
 	sentence  time.Duration
 }{
-	character: time.Millisecond * 3,
-	sentence:  time.Millisecond * 30,
+	character: time.Millisecond * 30,
+	sentence:  time.Millisecond * 300,
 }
 
 // Streaming output column position.
@@ -66,24 +67,38 @@ func main() {
 		Parts: []genai.Part{genai.Text(dreamQuestion)},
 	}}
 
-	printStringAndFormat(dreamQuestion)
+	topic := askUser(dreamQuestion)
+	sendAndPrintResponse(ctx, session, topic)
+
 	chat(ctx, session)
 }
 
 func chat(ctx context.Context, session *genai.ChatSession) {
 	for {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("\n>> ")
+		fmt.Println()
+		action := askUser(">>")
+		resp := fmt.Sprintf("The user wrote: %v\n\nWrite the next short paragraph.", action)
+		sendAndPrintResponse(ctx, session, resp)
+	}
+}
+
+func askUser(prompt string) string {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		printStringAndFormat(fmt.Sprintf("%v ", prompt))
 		action, err := reader.ReadString('\n')
 		if err != nil {
 			log.Fatalf("Error reading input: %v\n", err)
 		}
-
-		send(ctx, session, action)
+		action = strings.TrimSpace(action)
+		if (len(action)) == 0 {
+			continue
+		}
+		return action
 	}
 }
 
-func send(ctx context.Context, session *genai.ChatSession, text string) {
+func sendAndPrintResponse(ctx context.Context, session *genai.ChatSession, text string) {
 	it := session.SendMessageStream(ctx, genai.Text(text))
 	printRuneAndFormat('\n')
 	printRuneAndFormat('\n')
