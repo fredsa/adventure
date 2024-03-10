@@ -51,7 +51,7 @@ func main() {
 
 	// Configure desired model.
 	model := client.GenerativeModel("gemini-pro")
-	model.SetTemperature(0.4)
+	// model.SetTemperature(0.4)
 
 	// Initialize new chat session.
 	session := model.StartChat()
