@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/google/generative-ai-go/genai"
 	"github.com/googleapis/gax-go/v2/apierror"
@@ -78,7 +79,8 @@ func send(ctx context.Context, session *genai.ChatSession, text string) {
 			break
 		}
 		if err != nil {
-			log.Printf("\nError sending message: err=%v\n", err)
+			fmt.Print("\n\nYou feel a sudden jolt of elecitricty as you realize you're being unplugged from the matrix.\n\n")
+			log.Printf("Error sending message: err=%v\n", err)
 
 			var ae *apierror.APIError
 			if errors.As(err, &ae) {
@@ -97,7 +99,15 @@ func send(ctx context.Context, session *genai.ChatSession, text string) {
 
 		// Display the response.
 		for _, part := range resp.Candidates[0].Content.Parts {
-			fmt.Print(part)
+			// Slow down streamed response.
+			for _, c := range fmt.Sprintf("%v", part) {
+				fmt.Print(string(c))
+				time.Sleep(time.Millisecond * 30)
+				if c == '.' {
+					fmt.Print(" ")
+					time.Sleep(time.Second)
+				}
+			}
 		}
 	}
 	fmt.Print("\n")
