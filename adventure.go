@@ -22,8 +22,8 @@ var sleepTime = struct {
 	character time.Duration
 	sentence  time.Duration
 }{
-	character: time.Millisecond * 30,
-	sentence:  time.Millisecond * 300,
+	character: time.Millisecond * 3,
+	sentence:  time.Millisecond * 30,
 }
 
 // Streaming output column position.
@@ -47,16 +47,13 @@ func main() {
 		log.Fatalf("Error creating client: %v\n", err)
 	}
 	defer client.Close()
-	// log.Printf("client: %v", client)
 
 	// Configure desired model.
 	model := client.GenerativeModel("gemini-pro")
 	model.SetTemperature(0.4)
-	// log.Printf("model: %v", model)
 
 	// Initialize new chat session.
 	session := model.StartChat()
-	// log.Printf("session: %v", session)
 
 	dreamQuestion := "What do you want to dream about?"
 
@@ -114,7 +111,9 @@ func send(ctx context.Context, session *genai.ChatSession, text string) {
 			}
 			os.Exit(1)
 		}
-		streamPartialResponse(resp.Candidates[0].Content.Parts)
+		for _, cand := range resp.Candidates {
+			streamPartialResponse(cand.Content.Parts)
+		}
 	}
 	printRuneAndFormat('\n')
 }
